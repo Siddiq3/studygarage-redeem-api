@@ -1,19 +1,10 @@
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ ok: false, message: "Method not allowed" });
   }
 
   try {
-    const {
-      name,
-      email,
-      phone,
-      voucherType,
-      provider,
-      amount,
-      coinsUsed,
-    } = req.body || {};
-
+    const { name, email, phone, voucherType, provider, amount, coinsUsed } = req.body || {};
     if (!name || !email || !phone || !voucherType || !amount || !coinsUsed) {
       return res.status(400).json({ ok: false, message: "Missing fields" });
     }
@@ -23,26 +14,19 @@ export default async function handler(req, res) {
     const repo = process.env.GITHUB_REPO || "QuizData";
     const branch = process.env.GITHUB_BRANCH || "main";
 
-    if (!token) {
-      return res.status(500).json({ ok: false, message: "Server not configured" });
-    }
+    if (!token) return res.status(500).json({ ok: false, message: "Server not configured" });
 
     const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const payload = {
-      id: requestId,
-      name,
-      email,
-      phone,
-      voucherType,
+      id: requestId, name, email, phone, voucherType,
       provider: provider || "unknown",
       amount: Number(amount),
       coinsUsed: Number(coinsUsed),
       status: "pending",
-      createdAt: new Date().toISOString(),
+      createdAt: new Date().toISOString()
     };
 
-    const path = `redeemRequests/${requestId}.json`;
-    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+    const url = `https://api.github.com/repos/${owner}/${repo}/contents/redeemRequests/${requestId}.json`;
     const content = Buffer.from(JSON.stringify(payload, null, 2)).toString("base64");
 
     const ghResp = await fetch(url, {
@@ -50,13 +34,13 @@ export default async function handler(req, res) {
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: "application/vnd.github+json",
-        "Content-Type": "application/json",
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
         message: `New redeem request: ${voucherType} ₹${amount}`,
         content,
-        branch,
-      }),
+        branch
+      })
     });
 
     if (!ghResp.ok) {
@@ -66,6 +50,6 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ ok: true, requestId });
   } catch (e) {
-    return res.status(500).json({ ok: false, message: e?.message || "Server error" });
+    return res.status(500).json({ ok: false, message: e.message || "Server error" });
   }
-}
+};
